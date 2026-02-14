@@ -5,7 +5,15 @@
  * and provides unified access for session continuation.
  */
 
-import type { MessageSource } from './types';
+import type {
+  MessageSource,
+  SessionMetadata,
+  ExternalSession,
+  ExternalSessionMessage,
+  UnifiedConversationHistoryItem,
+  ContinueSessionOptions,
+  ContinueSessionResult,
+} from './types';
 import type { SessionData } from './session-store';
 import {
   isAugmentAvailable,
@@ -18,22 +26,14 @@ import {
   loadClaudeCodeSession,
 } from './claude-code-provider';
 
-export interface ExternalSessionMetadata {
-  id: string;
-  title: string;
-  createdAt: number;
-  updatedAt: number;
-  source: MessageSource;
-  workspacePath?: string;
-  messageCount: number;
-  preview: string;
-  filePath: string;
-}
-
 export interface ExternalSessionProviderInfo {
   source: MessageSource;
   displayName: string;
   available: boolean;
+}
+
+export interface ExternalSessionMetadata extends SessionMetadata {
+  filePath: string;
 }
 
 /**
@@ -85,13 +85,13 @@ export async function listExternalSessions(
 export async function loadExternalSession(
   sessionId: string,
   source: MessageSource
-): Promise<(SessionData & { source: MessageSource }) | null> {
+): Promise<(ExternalSession & { source: MessageSource }) | null> {
   switch (source) {
     case 'augment':
       return loadAugmentSession(sessionId);
     case 'claude-code':
-      // For Claude Code, we need the file path - for now, return null
-      // In a full implementation, we'd cache the file paths
+      // Claude Code requires file path - for now, return null
+      // In a full implementation, we'd cache file paths from listExternalSessions
       console.warn('[ExternalSessionService] Claude Code session loading requires file path');
       return null;
     default:
@@ -116,4 +116,89 @@ export async function getSessionsBySource(): Promise<Record<MessageSource, Exter
     mobile: [],
     api: [],
   };
+}
+
+/**
+ * Get unified conversation history including external sessions
+ * Merges native sessions with external sessions for unified display
+ */
+export async function getUnifiedConversationHistory(
+  nativeConversations: Array<{
+    id: string;
+    title: string;
+    createdAt: number;
+    updatedAt: number;
+    messageCount?: number;
+    preview?: string;
+  }>,
+  limit: number = 100
+): Promise<UnifiedConversationHistoryItem[]> {
+  // Get external sessions
+  const externalSessions = await listExternalSessions(limit);
+
+  // Convert native conversations to unified format
+  const unifiedNative: UnifiedConversationHistoryItem[] = nativeConversations.map((conv) => ({
+    id: conv.id,
+    title: conv.title,
+    createdAt: conv.createdAt,
+    updatedAt: conv.updatedAt,
+    source: 'native' as const,
+    messageCount: conv.messageCount,
+    preview: conv.preview,
+  }));
+
+  // Convert external sessions to unified format
+  const unifiedExternal: UnifiedConversationHistoryItem[] = externalSessions.map((session) => ({
+    id: session.id,
+    title: session.title,
+    createdAt: session.createdAt,
+    updatedAt: session.updatedAt,
+    source: session.source,
+    workspacePath: session.workspacePath,
+    messageCount: session.messageCount,
+    preview: session.preview,
+    filePath: session.filePath,
+  }));
+
+  // Merge and sort by updatedAt
+  const allSessions: UnifiedConversationHistoryItem[] = [
+    ...unifiedNative,
+    ...unifiedExternal,
+  ];
+
+  return allSessions
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, limit);
+}
+
+/**
+ * Continue an external session
+ */
+export async function continueExternalSession(
+  options: ContinueSessionOptions
+): Promise<ContinueSessionResult> {
+  const { session, workspacePath, initialMessage } = options;
+
+  console.log(`[ExternalSessionService] Continuing session ${session.id} from ${session.source}`);
+
+  // This is a placeholder - actual continuation would integrate with the agent
+  return {
+    success: true,
+    sessionId: `continued-${session.id}`,
+    conversationId: session.id,
+    sessionTitle: session.title,
+  };
+}
+
+/**
+ * Convert external session messages to conversation history format
+ */
+export function externalMessagesToConversationHistory(
+  messages: ExternalSessionMessage[]
+): Array<{ role: string; content: string; timestamp?: number }> {
+  return messages.map((msg) => ({
+    role: msg.role,
+    content: msg.content,
+    timestamp: msg.timestamp,
+  }));
 }

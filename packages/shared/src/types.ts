@@ -1,79 +1,75 @@
 /**
- * Shared types for SpeakMCP apps (desktop and mobile)
- * These types are used for communication between the mobile app and the remote server,
- * as well as for consistent data structures across both platforms.
+ * Message source - identifies where a message/conversation originated
  */
+export type MessageSource = 'native' | 'augment' | 'claude-code' | 'mobile' | 'api';
 
 /**
- * Tool call data - represents a call to an MCP tool
+ * Session metadata - for tracking session origins and lazy-loaded sessions
  */
-export interface ToolCall {
-  name: string;
-  arguments: Record<string, unknown>;
-}
-
-/**
- * Tool result data - represents the result of an MCP tool execution
- */
-export interface ToolResult {
-  success: boolean;
-  content: string;
-  error?: string;
-}
-
-/**
- * Base chat message interface shared between desktop and mobile.
- * This is the minimal structure needed for displaying messages with tool data.
- */
-export interface BaseChatMessage {
-  role: 'user' | 'assistant' | 'tool';
-  content: string;
-  toolCalls?: ToolCall[];
-  toolResults?: ToolResult[];
-}
-
-/**
- * Conversation history message - used in API responses and conversation storage.
- * Extends BaseChatMessage with an optional timestamp.
- */
-export interface ConversationHistoryMessage extends BaseChatMessage {
-  timestamp?: number;
-}
-
-/**
- * Chat response from the remote server API.
- * Includes the assistant's response content and optional conversation history with tool data.
- */
-export interface ChatApiResponse {
-  content: string;
-  conversationId?: string;
-  conversationHistory?: ConversationHistoryMessage[];
-  /** Indicates the message was queued instead of processed immediately */
-  queued?: boolean;
-  /** ID of the queued message if it was queued */
-  queuedMessageId?: string;
-}
-
-/**
- * Queued message - represents a message waiting to be processed.
- * Used when the agent is busy processing and messages are queued for later.
- */
-export interface QueuedMessage {
+export interface SessionMetadata {
   id: string;
-  conversationId: string;
-  text: string;
+  title: string;
   createdAt: number;
-  status: 'pending' | 'processing' | 'cancelled' | 'failed';
-  errorMessage?: string;
-  /** Indicates the message was added to conversation history before processing failed */
-  addedToHistory?: boolean;
+  updatedAt: number;
+  source: MessageSource;
+  workspacePath?: string;
+  messageCount?: number;
+  preview?: string;
+  filePath?: string;
 }
 
 /**
- * Message queue - represents a queue of messages for a conversation.
+ * External session message from Augment, Claude Code, etc.
  */
-export interface MessageQueue {
-  conversationId: string;
-  messages: QueuedMessage[];
+export interface ExternalSessionMessage {
+  role: 'user' | 'assistant' | 'tool' | 'system';
+  content: string;
+  timestamp?: number;
+  toolName?: string;
+  toolInput?: unknown;
+  toolOutput?: unknown;
+}
+
+/**
+ * Full external session data (loaded on demand)
+ */
+export interface ExternalSession extends SessionMetadata {
+  messages: ExternalSessionMessage[];
+  agentMetadata?: Record<string, unknown>;
+}
+
+/**
+ * Unified conversation history item - combines native and external sessions
+ */
+export interface UnifiedConversationHistoryItem {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  source: MessageSource;
+  workspacePath?: string;
+  messageCount?: number;
+  preview?: string;
+  filePath?: string;
+}
+
+/**
+ * Options for continuing an external session
+ */
+export interface ContinueSessionOptions {
+  session: SessionMetadata;
+  workspacePath?: string;
+  initialMessage?: string;
+}
+
+/**
+ * Result of continuing a session
+ */
+export interface ContinueSessionResult {
+  success: boolean;
+  sessionId?: string;
+  conversationId?: string;
+  sessionTitle?: string;
+  error?: string;
 }
 
