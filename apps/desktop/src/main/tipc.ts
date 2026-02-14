@@ -3375,6 +3375,27 @@ export const router = {
       return acpService.runTask(input.request)
     }),
 
+  // Get session info for an ACP agent
+  getAcpSessionInfo: t.procedure
+    .input<{ agentName: string }>()
+    .action(async ({ input }) => {
+      return acpService.getSessionInfo(input.agentName)
+    }),
+
+  // Set the model for an ACP session
+  setAcpSessionModel: t.procedure
+    .input<{ agentName: string; sessionId: string; modelId: string }>()
+    .action(async ({ input }) => {
+      return acpService.setSessionModel(input.agentName, input.sessionId, input.modelId)
+    }),
+
+  // Set the mode for an ACP session
+  setAcpSessionMode: t.procedure
+    .input<{ agentName: string; sessionId: string; modeId: string }>()
+    .action(async ({ input }) => {
+      return acpService.setSessionMode(input.agentName, input.sessionId, input.modeId)
+    }),
+
   // Get all subagent delegations with conversations for a session
   getSubagentDelegations: t.procedure
     .input<{ sessionId: string }>()

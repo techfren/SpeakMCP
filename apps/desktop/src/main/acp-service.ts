@@ -645,6 +645,84 @@ class ACPService extends EventEmitter {
   }
 
   /**
+   * Get session info for an ACP agent
+   * Returns session state including available models and modes
+   */
+  async getSessionInfo(agentName: string): Promise<{
+    sessionId?: string;
+    agentInfo?: { name: string; title: string; version: string };
+    sessionInfo?: {
+      models?: {
+        availableModels: Array<{ modelId: string; name: string; description?: string }>;
+        currentModelId: string;
+      };
+      modes?: {
+        availableModes: Array<{ id: string; name: string; description?: string }>;
+        currentModeId: string;
+      };
+    };
+  } | null> {
+    const instance = this.agents.get(agentName)
+    if (!instance) {
+      return null
+    }
+
+    return {
+      sessionId: instance.sessionId,
+      agentInfo: instance.agentInfo,
+      sessionInfo: instance.sessionInfo,
+    }
+  }
+
+  /**
+   * Set the model for an ACP session
+   * Uses the unstable_setSessionModel method per ACP spec
+   */
+  async setSessionModel(agentName: string, sessionId: string, modelId: string): Promise<{ success: boolean; error?: string }> {
+    const instance = this.agents.get(agentName)
+    if (!instance || !instance.sessionId) {
+      return { success: false, error: `Agent ${agentName} has no active session` }
+    }
+
+    try {
+      await this.sendRequest(agentName, "unstable_setSessionModel", {
+        sessionId,
+        modelId,
+      })
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  /**
+   * Set the mode for an ACP session
+   * Uses the setSessionMode method per ACP spec
+   */
+  async setSessionMode(agentName: string, sessionId: string, modeId: string): Promise<{ success: boolean; error?: string }> {
+    const instance = this.agents.get(agentName)
+    if (!instance || !instance.sessionId) {
+      return { success: false, error: `Agent ${agentName} has no active session` }
+    }
+
+    try {
+      await this.sendRequest(agentName, "setSessionMode", {
+        sessionId,
+        modeId,
+      })
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  /**
    * Send a JSON-RPC request to an agent
    */
   private async sendRequest(agentName: string, method: string, params?: unknown): Promise<unknown> {
