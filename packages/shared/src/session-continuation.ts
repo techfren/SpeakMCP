@@ -3,7 +3,8 @@
  * Restores external sessions from session store for seamless continuation
  */
 
-import type { SessionData, SessionMessage, SessionStore, MessageSource } from './session-store';
+import type { MessageSource } from './types';
+import type { SessionData, SessionMessage, SessionStore } from './session-store';
 import { getDefaultStore, createSessionMessage } from './session-store';
 import { isExternal } from './sources';
 
@@ -47,17 +48,7 @@ export async function restoreSession(
       return { success: false, error: 'Session not found' };
     }
 
-    // Check expiration from metadata.expiresAt first
-    console.log('DEBUG: Checking expiration - expiresAt:', session.metadata.expiresAt, 'Date.now():', Date.now());
-    if (session.metadata.expiresAt && Date.now() > session.metadata.expiresAt) {
-      console.log('DEBUG: Session expired detected');
-      const age = Date.now() - session.updatedAt;
-      options.onExpired?.(sessionId, age);
-      return { success: false, error: 'Session expired' };
-    }
-    console.log('DEBUG: Session not expired, continuing...');
-
-    // Then check max age
+    // Check age
     const age = Date.now() - session.updatedAt;
     if (age > maxAgeMs) {
       options.onExpired?.(sessionId, age);
@@ -152,7 +143,7 @@ export function sessionToChatMessages(
       return m.role === 'user' || m.role === 'assistant';
     })
     .map(m => ({
-      role: m.role,
+      role: m.role as 'user' | 'assistant',
       content: m.content,
       source: m.source,
     }));
@@ -167,7 +158,7 @@ export function getSessionSummary(session: SessionData): {
   duration: string;
   title: string;
 } {
-  const lastSource = session.metadata.lastSource || 'unknown';
+  const lastSource = session.metadata.lastSource || 'native';
   const userMessages = session.messages.filter(m => m.role === 'user').length;
   const duration = formatDuration(session.updatedAt - session.createdAt);
   const title = session.metadata.title || `Session ${session.id.slice(0, 8)}`;

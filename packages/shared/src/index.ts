@@ -13,4 +13,7 @@ export * from './url-utils';
 export * from './session-store';
 export * from './session-continuation';
 export * from './sources';
+export * from './augment-provider';
+export * from './claude-code-provider';
+export * from './external-session-service';
 

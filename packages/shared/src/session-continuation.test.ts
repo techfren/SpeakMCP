@@ -11,11 +11,11 @@ import {
   listExternalSessions,
   createContinuationHandler,
 } from './session-continuation';
-import type { SessionData, SessionMessage, SessionStore, MessageSource } from './session-store';
+import type { MessageSource } from './types';
+import type { SessionData, SessionMessage, SessionStore } from './session-store';
 import { MemorySessionStore } from './session-store';
 import * as sessionStoreModule from './session-store';
 import * as sourcesModule from './sources';
-import * as sources from './sources';
 import * as sources from './sources';
 
 describe('session-continuation', () => {
